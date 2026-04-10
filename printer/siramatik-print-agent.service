@@ -24,6 +24,7 @@ Environment=SIRAMATIK_KIOSK_DIR=/home/alper/apps/KIOSK
 Environment=PRINT_LISTEN_HOST=127.0.0.1
 Environment=PRINT_LISTEN_PORT=9131
 Environment=PRINT_DEVICE=/dev/usb/lp0
+# XDG/WAYLAND: boot-print-agent.sh icinde de ayarlanir (alper UID + wayland-0/1 soketi).
 ExecStart=/bin/sh /home/alper/apps/KIOSK/printer/boot-print-agent.sh
 Restart=on-failure
 RestartSec=3

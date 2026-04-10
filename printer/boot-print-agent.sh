@@ -32,4 +32,19 @@ git_pull_if_behind() {
 kill_same_agent || true
 git_pull_if_behind || true
 cd "$SCRIPT_DIR" || exit 1
+
+# systemd User=alper ile baslarken XDG_RUNTIME_DIR bos kalir; wtype Wayland icin gerekir.
+# Yeni main.py cikista pkill kullanir; eski surum veya yedek F11 icin yine faydali.
+UID_NUM="$(id -u)"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$UID_NUM}"
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+	for w in wayland-0 wayland-1; do
+		if [ -S "$XDG_RUNTIME_DIR/$w" ] 2>/dev/null; then
+			export WAYLAND_DISPLAY="$w"
+			break
+		fi
+	done
+fi
+: "${WAYLAND_DISPLAY:=wayland-0}"
+
 exec python3 main.py
