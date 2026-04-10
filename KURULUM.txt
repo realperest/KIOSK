@@ -37,3 +37,11 @@ Kurulum:
   sudo systemctl daemon-reload && sudo systemctl enable --now siramatik-print-agent.service
 
 Gelistirme agaci: SIRAMATIK/KIOSK/... (monorepo). kiosk-print-agent/*.sh -> KIOSK/guncellemeler/ yonlendiricidir.
+
+GitHub — ayri KIOSK deposu (Windows ornek: D:\KODLAMALAR\GITHUB\KIOSK)
+  1) github.com -> New repository -> ad: KIOSK -> bos (README ekleme) -> Create
+  2) remote zaten: git remote -v  ->  https://github.com/realperest/KIOSK.git
+  3) Push:  cd D:\KODLAMALAR\GITHUB\KIOSK
+            git push -u origin main
+
+Alternatif (GitHub CLI):  gh repo create realperest/KIOSK --public --source=. --remote=origin --push
