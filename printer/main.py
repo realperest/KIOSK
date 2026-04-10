@@ -9,7 +9,8 @@ Opsiyonel (geri besleme / marka komutlari):
     (bosluk yok veya sorun degil; ornek: 1b6501 = ESC e 1). Cogu termal yazici fiziksel
     olarak geri cekemez ve ESC e yoksayilir; marka dokumanina gore burada doğru diziyi
     verin (or. bazı Sunmi: 1b4b64).
-Uçlar: GET /health, POST /print (JSON {"data_base64":"..."}), POST /test-print
+Uçlar: GET /health, POST /print (JSON {"data_base64":"..."}), POST /test-print,
+POST /api/system/exit-fullscreen (kiosk Chromium pkill; yalnızca 127.0.0.1)
 """
 from __future__ import annotations
 
@@ -150,12 +151,52 @@ class PrintAgentHandler(BaseHTTPRequestHandler):
         if path == "/api/system/exit-fullscreen":
             try:
                 import subprocess
-                # wtype ile F11 tuş baskısı simüle edilir (Tam ekrandan çıkış için)
-                subprocess.run(["wtype", "-k", "F11"], check=False)
-                logger.info("Tam ekrandan cikis emri (F11) gonderildi.")
-                self._send_json(200, {"status": "ok", "message": "F11 gonderildi"})
+
+                # --kiosk modunda F11 guvenilir degil; yetkili cikis: Chromium surecini sonlandir.
+                # Servis User=alper ile calisir; pkill yalnizca ayni kullanicinin sureclerine signal gonderir.
+                def _pkill_kiosk_chromium() -> tuple[int, str]:
+                    patterns = [
+                        r"chromium-browser.*--kiosk",
+                        r"chromium.*--kiosk",
+                    ]
+                    last_rc = 1
+                    for pat in patterns:
+                        pr = subprocess.run(
+                            ["pkill", "-f", pat],
+                            check=False,
+                        )
+                        last_rc = pr.returncode
+                        if last_rc == 0:
+                            return 0, pat
+                    return last_rc, patterns[-1]
+
+                rc, used_pat = _pkill_kiosk_chromium()
+                if rc != 0:
+                    logger.warning(
+                        "Kiosk cikis: pkill eslesmedi (rc=%s), genis chromium denemesi",
+                        rc,
+                    )
+                    pr2 = subprocess.run(
+                        ["pkill", "-f", r"/chromium"],
+                        check=False,
+                    )
+                    rc = pr2.returncode
+                    used_pat = "/chromium"
+                logger.info(
+                    "Kiosk cikis: pkill pattern=%s returncode=%s",
+                    used_pat,
+                    rc,
+                )
+                self._send_json(
+                    200,
+                    {
+                        "status": "ok",
+                        "message": "chromium_sonlandirildi",
+                        "pkill_returncode": rc,
+                    },
+                )
             except Exception as exc:
-                logger.exception("F11 hatasi: %s", exc)
+                logger.exception("Kiosk cikis hatasi: %s", exc)
                 self._send_json(500, {"status": "error", "detail": str(exc)})
             return
 
