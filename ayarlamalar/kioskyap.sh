@@ -13,6 +13,9 @@ SIRAMATIK_APPS_ROOT="${SIRAMATIK_APPS_ROOT:-/home/alper/apps}"
 GIT_REPO_ECHO="${SIRAMATIK_REPO:-$SIRAMATIK_APPS_ROOT/SIRAMATIK}"
 
 URL="${SIRAMATIK_KIOSK_URL:-https://siramatik.inovathinks.com/kiosk.html}"
+# kiosk = Chromium --kiosk (kilitli, parmakla 'tam ekrandan cik' yok; halka acik terminal icin uygun)
+# app    = --app + --start-fullscreen (daha az kilitli; F11 / jestler WM'ye gore fark edebilir)
+CHROME_UI_MODE="${SIRAMATIK_KIOSK_CHROME_MODE:-kiosk}"
 
 LAUNCHER_SCRIPT="$AYARLAMALAR_DIR/siramatik-kiosk-run.sh"
 USER_DATA_DIR="$AYARLAMALAR_DIR/.kiosk-profile"
@@ -28,6 +31,7 @@ echo "SIRAMATIK KIOSK YAPILANDIRMASI (WAYLAND MODU) BASLIYOR..."
 echo "  apps: $SIRAMATIK_APPS_ROOT"
 echo "  KIOSK: $KIOSK_DIR"
 echo "  git depo (beklenen): $GIT_REPO_ECHO"
+echo "  Chromium: $CHROME_UI_MODE (SIRAMATIK_KIOSK_CHROME_MODE=app ile uygulama+tam ekran)"
 echo "----------------------------------------------------------"
 
 rm -f "$HOME/.siramatik-kiosk-run.sh"
@@ -55,19 +59,34 @@ mkdir -p "$USER_DATA_DIR/Default"
 touch "$USER_DATA_DIR/Default/Preferences" 2>/dev/null
 sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' "$USER_DATA_DIR/Default/Preferences" 2>/dev/null
 
-# --kiosk: tam ekran, adres cubugu yok (Wayland/Labwc'de --app --start-fullscreen'dan genelde daha iyi)
-# Ozel user-data-dir + Default profil; gizli mod bayragi yok
-$CHROME_CMD --kiosk "$URL" \\
-    --user-data-dir="$USER_DATA_DIR" \\
-    --profile-directory=Default \\
-    --no-first-run \\
-    --ozone-platform-hint=auto \\
-    --force-device-scale-factor=1.00 \\
-    --noerrdialogs \\
-    --disable-infobars \\
-    --hide-crash-restore-bubble \\
-    --disk-cache-size=1 \\
-    --media-cache-size=1 &
+# kioskyap calisirken sabitlenen mod: $CHROME_UI_MODE
+MODE="$CHROME_UI_MODE"
+if [ "\$MODE" = "app" ]; then
+	$CHROME_CMD --app="$URL" --start-fullscreen \\
+	    --user-data-dir="$USER_DATA_DIR" \\
+	    --profile-directory=Default \\
+	    --no-first-run \\
+	    --ozone-platform-hint=auto \\
+	    --force-device-scale-factor=1.00 \\
+	    --noerrdialogs \\
+	    --disable-infobars \\
+	    --hide-crash-restore-bubble \\
+	    --disk-cache-size=1 \\
+	    --media-cache-size=1 &
+else
+	# --kiosk: Android tablet jesti gibi kenardan cekerek cikis OLMAZ (halka acik kiosk icin)
+	$CHROME_CMD --kiosk "$URL" \\
+	    --user-data-dir="$USER_DATA_DIR" \\
+	    --profile-directory=Default \\
+	    --no-first-run \\
+	    --ozone-platform-hint=auto \\
+	    --force-device-scale-factor=1.00 \\
+	    --noerrdialogs \\
+	    --disable-infobars \\
+	    --hide-crash-restore-bubble \\
+	    --disk-cache-size=1 \\
+	    --media-cache-size=1 &
+fi
 
 sleep 12
 command -v wtype >/dev/null 2>&1 && wtype -k F11
