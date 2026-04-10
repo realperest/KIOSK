@@ -22,7 +22,7 @@ Ortam (systemd [Service] veya shell):
   SIRAMATIK_REPO=/home/alper/apps/SIRAMATIK
   SIRAMATIK_GIT_USER=alper
   SIRAMATIK_KIOSK_URL=https://.../kiosk.html
-  SIRAMATIK_KIOSK_CHROME_MODE=app   (istege bagli: varsayilan kiosk; app = daha az kilitli tam ekran)
+  SIRAMATIK_KIOSK_CHROME_MODE=app   (istege bagli; ~/.profile export veya bu satir; acilista siramatik-kiosk-run.sh okur)
 
 systemd ornek (yollar kullaniciya gore):
   ExecStart=/bin/sh /home/alper/apps/KIOSK/printer/boot-print-agent.sh

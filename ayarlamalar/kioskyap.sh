@@ -59,8 +59,9 @@ mkdir -p "$USER_DATA_DIR/Default"
 touch "$USER_DATA_DIR/Default/Preferences" 2>/dev/null
 sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' "$USER_DATA_DIR/Default/Preferences" 2>/dev/null
 
-# kioskyap calisirken sabitlenen mod: $CHROME_UI_MODE
+# Varsayilan (kioskyap aninda): $CHROME_UI_MODE; acilista ~/.profile vb. ile ezebilirsiniz
 MODE="$CHROME_UI_MODE"
+[ -n "\${SIRAMATIK_KIOSK_CHROME_MODE:-}" ] && MODE="\${SIRAMATIK_KIOSK_CHROME_MODE}"
 if [ "\$MODE" = "app" ]; then
 	$CHROME_CMD --app="$URL" --start-fullscreen \\
 	    --user-data-dir="$USER_DATA_DIR" \\
