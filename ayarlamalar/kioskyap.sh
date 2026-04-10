@@ -50,11 +50,17 @@ export XDG_RUNTIME_DIR=/run/user/\$(id -u)
 pkill -f chromium 2>/dev/null
 sleep 2
 
-sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' ~/.config/chromium/Default/Preferences 2>/dev/null
+# Profil bu dizinde; ~/.config/chromium degil (yanlis yol incognito/profil karisikligine yol acabilir)
+mkdir -p "$USER_DATA_DIR/Default"
+touch "$USER_DATA_DIR/Default/Preferences" 2>/dev/null
+sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' "$USER_DATA_DIR/Default/Preferences" 2>/dev/null
 
-$CHROME_CMD --app="$URL" \\
-    --start-fullscreen \\
+# --kiosk: tam ekran, adres cubugu yok (Wayland/Labwc'de --app --start-fullscreen'dan genelde daha iyi)
+# Ozel user-data-dir + Default profil; gizli mod bayragi yok
+$CHROME_CMD --kiosk "$URL" \\
     --user-data-dir="$USER_DATA_DIR" \\
+    --profile-directory=Default \\
+    --no-first-run \\
     --ozone-platform-hint=auto \\
     --force-device-scale-factor=1.00 \\
     --noerrdialogs \\
@@ -63,8 +69,8 @@ $CHROME_CMD --app="$URL" \\
     --disk-cache-size=1 \\
     --media-cache-size=1 &
 
-sleep 15
-wtype -k F11
+sleep 12
+command -v wtype >/dev/null 2>&1 && wtype -k F11
 EOF
 chmod +x "$LAUNCHER_SCRIPT"
 echo "   > Wayland uyumlu baslatici olusturuldu: $LAUNCHER_SCRIPT"
