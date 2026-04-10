@@ -72,6 +72,7 @@ if [ "\$MODE" = "app" ]; then
 	    --noerrdialogs \\
 	    --disable-infobars \\
 	    --hide-crash-restore-bubble \\
+	    --disable-features=BlockInsecurePrivateNetworkRequests \\
 	    --disk-cache-size=1 \\
 	    --media-cache-size=1 &
 else
@@ -85,6 +86,7 @@ else
 	    --noerrdialogs \\
 	    --disable-infobars \\
 	    --hide-crash-restore-bubble \\
+	    --disable-features=BlockInsecurePrivateNetworkRequests \\
 	    --disk-cache-size=1 \\
 	    --media-cache-size=1 &
 fi
