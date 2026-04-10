@@ -10,7 +10,8 @@ Opsiyonel (geri besleme / marka komutlari):
     olarak geri cekemez ve ESC e yoksayilir; marka dokumanina gore burada doğru diziyi
     verin (or. bazı Sunmi: 1b4b64).
 Uçlar: GET /health, POST /print (JSON {"data_base64":"..."}), POST /test-print,
-POST /api/system/exit-fullscreen (kiosk Chromium pkill; yalnızca 127.0.0.1)
+POST /api/system/exit-fullscreen (kiosk Chromium pkill/killall; yalnızca 127.0.0.1).
+  PRINT_AGENT_KILLALL_NAMES — ek killall isimleri (virgülle, ör. chrome)
 """
 from __future__ import annotations
 
@@ -154,31 +155,73 @@ class PrintAgentHandler(BaseHTTPRequestHandler):
             try:
                 import subprocess
 
-                # --kiosk: F11 guvenilir degil; yetkili cikis = Chromium sonlanir.
-                # pkill deseni bazen RPi komut satiriyla eslesmez; killall + gerekirse SIGKILL.
+                try:
+                    clen = int(self.headers.get("Content-Length", "0"))
+                except ValueError:
+                    clen = 0
+                if clen > 0 and clen < 65536:
+                    try:
+                        self.rfile.read(clen)
+                    except OSError as exc:
+                        logger.warning("exit-fullscreen body okuma: %s", exc)
+
+                # --kiosk: yetkili cikis = Chromium sonlanir (pkill/killall; autorestart ayri konu).
                 try:
                     run_user = getpass.getuser()
                 except Exception:
                     run_user = os.environ.get("USER", "")
 
                 notes: list[str] = []
+                any_hit = False
+
+                if run_user:
+                    pg = subprocess.run(
+                        ["pgrep", "-a", "-u", run_user, "chromium"],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                    )
+                    snap = (pg.stdout or "").strip().replace("\n", " | ")[:800]
+                    logger.info("Kiosk cikis oncesi pgrep -u %s chromium: %s", run_user, snap or "(bos)")
 
                 for pat in (
                     r"chromium-browser.*--kiosk",
                     r"chromium.*--kiosk",
                 ):
                     pr = subprocess.run(["pkill", "-f", pat], check=False)
+                    if pr.returncode == 0:
+                        any_hit = True
                     notes.append(f"pkill({pat!r})={pr.returncode}")
 
                 pr_b = subprocess.run(["pkill", "-f", r"/chromium"], check=False)
+                if pr_b.returncode == 0:
+                    any_hit = True
                 notes.append(f"pkill(/chromium)={pr_b.returncode}")
 
                 if run_user:
-                    for name in ("chromium", "chromium-browser"):
+                    pr_u = subprocess.run(
+                        ["pkill", "-u", run_user, "-f", "chromium"],
+                        check=False,
+                    )
+                    if pr_u.returncode == 0:
+                        any_hit = True
+                    notes.append(f"pkill(-u,{run_user},-f,chromium)={pr_u.returncode}")
+
+                kill_names = ["chromium", "chromium-browser"]
+                extra = _env_str("PRINT_AGENT_KILLALL_NAMES", "")
+                if extra:
+                    kill_names.extend(
+                        [x.strip() for x in extra.split(",") if x.strip()]
+                    )
+
+                if run_user:
+                    for name in kill_names:
                         pr_k = subprocess.run(
                             ["killall", "-u", run_user, name],
                             check=False,
                         )
+                        if pr_k.returncode == 0:
+                            any_hit = True
                         notes.append(f"killallTERM({name})={pr_k.returncode}")
 
                 delay = float(_env_str("PRINT_AGENT_KIOSK_EXIT_KILL_DELAY_SEC", "0.45"))
@@ -186,21 +229,24 @@ class PrintAgentHandler(BaseHTTPRequestHandler):
                     time.sleep(delay)
 
                 if run_user:
-                    for name in ("chromium", "chromium-browser"):
+                    for name in kill_names:
                         pr_k9 = subprocess.run(
                             ["killall", "-9", "-u", run_user, name],
                             check=False,
                         )
+                        if pr_k9.returncode == 0:
+                            any_hit = True
                         notes.append(f"killallKILL({name})={pr_k9.returncode}")
 
                 log_line = " ".join(notes)
-                logger.info("Kiosk cikis: %s", log_line)
+                logger.info("Kiosk cikis: any_hit=%s %s", any_hit, log_line)
                 self._send_json(
                     200,
                     {
                         "status": "ok",
                         "message": "chromium_sonlandirildi",
                         "steps": log_line,
+                        "any_process_matched": any_hit,
                     },
                 )
             except Exception as exc:
