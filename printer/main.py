@@ -15,10 +15,12 @@ POST /api/system/exit-fullscreen (kiosk Chromium pkill; yalnızca 127.0.0.1)
 from __future__ import annotations
 
 import base64
+import getpass
 import json
 import logging
 import os
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import urlparse
@@ -152,47 +154,53 @@ class PrintAgentHandler(BaseHTTPRequestHandler):
             try:
                 import subprocess
 
-                # --kiosk modunda F11 guvenilir degil; yetkili cikis: Chromium surecini sonlandir.
-                # Servis User=alper ile calisir; pkill yalnizca ayni kullanicinin sureclerine signal gonderir.
-                def _pkill_kiosk_chromium() -> tuple[int, str]:
-                    patterns = [
-                        r"chromium-browser.*--kiosk",
-                        r"chromium.*--kiosk",
-                    ]
-                    last_rc = 1
-                    for pat in patterns:
-                        pr = subprocess.run(
-                            ["pkill", "-f", pat],
+                # --kiosk: F11 guvenilir degil; yetkili cikis = Chromium sonlanir.
+                # pkill deseni bazen RPi komut satiriyla eslesmez; killall + gerekirse SIGKILL.
+                try:
+                    run_user = getpass.getuser()
+                except Exception:
+                    run_user = os.environ.get("USER", "")
+
+                notes: list[str] = []
+
+                for pat in (
+                    r"chromium-browser.*--kiosk",
+                    r"chromium.*--kiosk",
+                ):
+                    pr = subprocess.run(["pkill", "-f", pat], check=False)
+                    notes.append(f"pkill({pat!r})={pr.returncode}")
+
+                pr_b = subprocess.run(["pkill", "-f", r"/chromium"], check=False)
+                notes.append(f"pkill(/chromium)={pr_b.returncode}")
+
+                if run_user:
+                    for name in ("chromium", "chromium-browser"):
+                        pr_k = subprocess.run(
+                            ["killall", "-u", run_user, name],
                             check=False,
                         )
-                        last_rc = pr.returncode
-                        if last_rc == 0:
-                            return 0, pat
-                    return last_rc, patterns[-1]
+                        notes.append(f"killallTERM({name})={pr_k.returncode}")
 
-                rc, used_pat = _pkill_kiosk_chromium()
-                if rc != 0:
-                    logger.warning(
-                        "Kiosk cikis: pkill eslesmedi (rc=%s), genis chromium denemesi",
-                        rc,
-                    )
-                    pr2 = subprocess.run(
-                        ["pkill", "-f", r"/chromium"],
-                        check=False,
-                    )
-                    rc = pr2.returncode
-                    used_pat = "/chromium"
-                logger.info(
-                    "Kiosk cikis: pkill pattern=%s returncode=%s",
-                    used_pat,
-                    rc,
-                )
+                delay = float(_env_str("PRINT_AGENT_KIOSK_EXIT_KILL_DELAY_SEC", "0.45"))
+                if delay > 0:
+                    time.sleep(delay)
+
+                if run_user:
+                    for name in ("chromium", "chromium-browser"):
+                        pr_k9 = subprocess.run(
+                            ["killall", "-9", "-u", run_user, name],
+                            check=False,
+                        )
+                        notes.append(f"killallKILL({name})={pr_k9.returncode}")
+
+                log_line = " ".join(notes)
+                logger.info("Kiosk cikis: %s", log_line)
                 self._send_json(
                     200,
                     {
                         "status": "ok",
                         "message": "chromium_sonlandirildi",
-                        "pkill_returncode": rc,
+                        "steps": log_line,
                     },
                 )
             except Exception as exc:
