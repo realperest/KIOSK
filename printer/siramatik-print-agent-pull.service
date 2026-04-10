@@ -1,0 +1,22 @@
+# Zamanlayici ile periyodik guncelleme (apps/KIOSK + apps/SIRAMATIK git).
+#
+# sudo cp siramatik-print-agent-pull.service /etc/systemd/system/
+# sudo cp siramatik-print-agent-pull.timer /etc/systemd/system/
+# sudo systemctl daemon-reload
+# sudo systemctl enable --now siramatik-print-agent-pull.timer
+
+[Unit]
+Description=Siramatik print-agent: git pull (sadece gerideyse) + agent yeniden baslat
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=SIRAMATIK_APPS_ROOT=/home/alper/apps
+Environment=SIRAMATIK_REPO=/home/alper/apps/SIRAMATIK
+Environment=SIRAMATIK_KIOSK_DIR=/home/alper/apps/KIOSK
+Environment=SIRAMATIK_GIT_USER=alper
+ExecStart=/bin/sh /home/alper/apps/KIOSK/guncellemeler/pi-apply-updates.sh
+
+[Install]
+WantedBy=multi-user.target

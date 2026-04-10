@@ -1,0 +1,32 @@
+# systemd — tablet acilista print-agent + (mumkunse) git pull
+#
+# Pi yerlesimi:
+#   /home/alper/apps/KIOSK/printer/boot-print-agent.sh
+#   Git: /home/alper/apps/SIRAMATIK (SIRAMATIK_REPO)
+#
+#  chmod +x /home/alper/apps/KIOSK/printer/boot-print-agent.sh
+#  sudo cp siramatik-print-agent.service /etc/systemd/system/
+#  sudo systemctl daemon-reload
+#  sudo systemctl enable --now siramatik-print-agent.service
+
+[Unit]
+Description=Siramatik kiosk print-agent (baslangicta kill + git pull + main.py)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=alper
+Group=lp
+Environment=SIRAMATIK_APPS_ROOT=/home/alper/apps
+Environment=SIRAMATIK_REPO=/home/alper/apps/SIRAMATIK
+Environment=SIRAMATIK_KIOSK_DIR=/home/alper/apps/KIOSK
+Environment=PRINT_LISTEN_HOST=127.0.0.1
+Environment=PRINT_LISTEN_PORT=9131
+Environment=PRINT_DEVICE=/dev/usb/lp0
+ExecStart=/bin/sh /home/alper/apps/KIOSK/printer/boot-print-agent.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

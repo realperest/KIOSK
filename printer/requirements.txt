@@ -1,0 +1,2 @@
+# Harici paket yok. Python 3.9+ yeterlidir (Raspberry Pi OS).
+# Bu dosya yalnizca bilgi amaclidir; pip install gerekmez.

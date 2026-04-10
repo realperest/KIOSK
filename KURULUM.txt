@@ -1,0 +1,39 @@
+SIRAMATIK — KIOSK (Raspberry Pi) /home/alper/apps
+==================================================
+
+Dizin yapisi:
+  /home/alper/apps/KIOSK/printer/       USB termal yazdirma araci (main.py, boot-print-agent, systemd sablonlari)
+  /home/alper/apps/KIOSK/ayarlamalar/   Chromium kiosk (kioskyap, kioskkapat, master_setup_raspberry)
+  /home/alper/apps/KIOSK/guncellemeler/ Git guncelleme betikleri (pi-env, pi-git-pull-if-needed, pi-apply-updates, ...)
+
+Git deposu (SIRAMATIK monorepo klonu):
+  /home/alper/apps/SIRAMATIK/
+
+guncellemeler/
+  pi-env.sh                    SIRAMATIK_APPS_ROOT, SIRAMATIK_REPO, SIRAMATIK_KIOSK_DIR
+  pi-git-pull-if-needed.sh     SIRAMATIK_REPO veya monorepoda ff-only pull
+  pi-apply-updates.sh          systemd zamanlayici: pull + siramatik-print-agent restart
+  pi-boot-update-check.sh      Acilis sonrasi kontrol
+  pi-update-from-git.sh        Manuel git pull
+
+Ortam (systemd [Service] veya shell):
+  SIRAMATIK_APPS_ROOT=/home/alper/apps
+  SIRAMATIK_KIOSK_DIR=/home/alper/apps/KIOSK
+  SIRAMATIK_REPO=/home/alper/apps/SIRAMATIK
+  SIRAMATIK_GIT_USER=alper
+  SIRAMATIK_KIOSK_URL=https://.../kiosk.html
+
+systemd ornek (yollar kullaniciya gore):
+  ExecStart=/bin/sh /home/alper/apps/KIOSK/printer/boot-print-agent.sh
+  ExecStart=/bin/sh /home/alper/apps/KIOSK/guncellemeler/pi-apply-updates.sh   (pull servisi)
+
+Kurulum:
+  git clone <SIRAMATIK> /home/alper/apps/SIRAMATIK
+  rsync -a /home/alper/apps/SIRAMATIK/KIOSK/ /home/alper/apps/KIOSK/
+  chmod +x /home/alper/apps/KIOSK/guncellemeler/*.sh /home/alper/apps/KIOSK/printer/*.sh /home/alper/apps/KIOSK/ayarlamalar/*.sh
+  bash /home/alper/apps/KIOSK/ayarlamalar/kioskyap.sh
+  sudo cp /home/alper/apps/KIOSK/printer/siramatik-print-agent*.service /etc/systemd/system/
+  sudo cp /home/alper/apps/KIOSK/printer/siramatik-print-agent-pull.timer /etc/systemd/system/
+  sudo systemctl daemon-reload && sudo systemctl enable --now siramatik-print-agent.service
+
+Gelistirme agaci: SIRAMATIK/KIOSK/... (monorepo). kiosk-print-agent/*.sh -> KIOSK/guncellemeler/ yonlendiricidir.
