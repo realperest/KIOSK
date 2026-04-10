@@ -30,8 +30,10 @@ if [ -f "$WAYFIRE_CONFIG" ]; then
 fi
 
 if [ -f "$LABWC_AUTOSTART_FILE" ]; then
-	sed -i "\|$LAUNCHER_SCRIPT|d" "$LABWC_AUTOSTART_FILE"
-	echo "   > Labwc kaydi temizlendi."
+	sed -i '/siramatik-kiosk-run\.sh/d' "$LABWC_AUTOSTART_FILE"
+	sed -i '/kiosk-print-agent/d' "$LABWC_AUTOSTART_FILE"
+	sed -i '/SIRA_YAZICI/d' "$LABWC_AUTOSTART_FILE"
+	echo "   > Labwc kiosk satirlari temizlendi."
 fi
 
 pkill chromium 2>/dev/null

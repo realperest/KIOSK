@@ -75,28 +75,43 @@ EOF
 chmod +x "$LAUNCHER_SCRIPT"
 echo "   > Wayland uyumlu baslatici olusturuldu: $LAUNCHER_SCRIPT"
 
-mkdir -p "$XDG_AUTOSTART_DIR"
-cat <<EOF > "$XDG_AUTOSTART_FILE"
+# --- Otobaslatma: LABWC + XDG ikisi birden calisirsa launcher IKI KEZ acilir;
+# script basindaki pkill ilk Chromium'u oldurur -> "acildi kapandi tekrar acildi" etkisi.
+USE_LABWC=false
+if [ -f "/usr/bin/labwc" ] || [ -d "$LABWC_AUTOSTART_DIR" ]; then
+	USE_LABWC=true
+fi
+
+if [ "$USE_LABWC" = true ]; then
+	rm -f "$XDG_AUTOSTART_FILE"
+	echo "   > Labwc oturumu: ~/.config/autostart/siramatik_kiosk.desktop kaldirildi (cift tetikleme onlendi)."
+	mkdir -p "$LABWC_AUTOSTART_DIR"
+	touch "$LABWC_AUTOSTART_FILE"
+	# Eski / yinelenen kiosk satirlarini temizle (SIRA_YAZICI, onceki KIOSK yollari)
+	sed -i '/siramatik-kiosk-run\.sh/d' "$LABWC_AUTOSTART_FILE"
+	sed -i '/kiosk-print-agent/d' "$LABWC_AUTOSTART_FILE"
+	sed -i '/SIRA_YAZICI/d' "$LABWC_AUTOSTART_FILE"
+	echo "$LAUNCHER_SCRIPT" >> "$LABWC_AUTOSTART_FILE"
+	chmod +x "$LABWC_AUTOSTART_FILE"
+	echo "   > Labwc autostart (tek satir): $LAUNCHER_SCRIPT"
+	if [ -f "$WAYFIRE_CONFIG" ] && grep -q "siramatik_kiosk" "$WAYFIRE_CONFIG" 2>/dev/null; then
+		echo "   > UYARI: ~/.config/wayfire.ini icinde siramatik_kiosk var; Labwc kullaniyorsan bu satirlari silin (cift baslatma)."
+	fi
+else
+	mkdir -p "$XDG_AUTOSTART_DIR"
+	cat <<EOF > "$XDG_AUTOSTART_FILE"
 [Desktop Entry]
 Type=Application
 Name=Siramatik Kiosk
 Exec=$LAUNCHER_SCRIPT
 X-GNOME-Autostart-enabled=true
 EOF
-
-if [ -f "$WAYFIRE_CONFIG" ]; then
-	if ! grep -q "siramatik_kiosk" "$WAYFIRE_CONFIG"; then
-		echo -e "\n[autostart]\nsiramatik_kiosk = $LAUNCHER_SCRIPT" >> "$WAYFIRE_CONFIG"
-		echo "   > Wayfire otobaslatma kaydi eklendi."
-	fi
-fi
-
-if [ -d "$LABWC_AUTOSTART_DIR" ] || [ -f "/usr/bin/labwc" ]; then
-	mkdir -p "$LABWC_AUTOSTART_DIR"
-	if [ ! -f "$LABWC_AUTOSTART_FILE" ] || ! grep -q "$LAUNCHER_SCRIPT" "$LABWC_AUTOSTART_FILE"; then
-		echo "$LAUNCHER_SCRIPT" >> "$LABWC_AUTOSTART_FILE"
-		chmod +x "$LABWC_AUTOSTART_FILE"
-		echo "   > Labwc otobaslatma kaydi eklendi."
+	echo "   > XDG autostart: $XDG_AUTOSTART_FILE"
+	if [ -f "$WAYFIRE_CONFIG" ]; then
+		if ! grep -q "siramatik_kiosk" "$WAYFIRE_CONFIG"; then
+			echo -e "\n[autostart]\nsiramatik_kiosk = $LAUNCHER_SCRIPT" >> "$WAYFIRE_CONFIG"
+			echo "   > Wayfire otobaslatma kaydi eklendi."
+		fi
 	fi
 fi
 
